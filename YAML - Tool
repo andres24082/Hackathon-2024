@@ -1,0 +1,61 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "Consulta de Cupo SARiC API",
+    "description": "API para consultar el Cupo SARiC basado en el documento",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://us-central1-chatbot-hackathon-433517.cloudfunctions.net/Limite_SARIC"
+    }
+  ],
+  "paths": {
+    "/ConsultaLimite": {
+      "get": {
+        "summary": "Obtener Cupo SARiC basado en documento",
+        "description": "Devuelve el Cupo SARiC basado en el documento proporcionado",
+        "operationId": "getInvestmentLimit",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "nit",
+            "description": "El documento del cliente para la consulta",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Información del Cupo SARiC",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "nit": {
+                      "type": "string",
+                      "description": "El documento del cliente"
+                    },
+                    "limit": {
+                      "type": "string",
+                      "description": "El Cupo SARiC asociado al documento"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Solicitud incorrecta - Parámetro faltante o inválido"
+          },
+          "404": {
+            "description": "documento no encontrado"
+          }
+        }
+      }
+    }
+  }
+}
