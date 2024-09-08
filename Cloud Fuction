@@ -1,0 +1,55 @@
+import csv
+import os
+from google.cloud import storage
+from flask import Flask, request, make_response, jsonify
+import json
+import pandas as pd
+
+app = Flask(__name__)
+
+# Nombre del bucket y archivo Excel (incluye la ruta de la carpeta)
+BUCKET_NAME = 'chatbot_risky'
+EXCEL_FILE_NAME = 'SARIC/LIMITE_SARIC.xlsx'
+
+# Función para obtener los datos del Excel desde Google Cloud Storage
+def get_investment_limits_from_excel():
+    storage_client = storage.Client()
+    bucket = storage_client.get_bucket(BUCKET_NAME)
+    blob = bucket.blob(EXCEL_FILE_NAME)
+    data = blob.download_as_bytes()
+
+    # Leer el archivo Excel usando pandas
+    df = pd.read_excel(data)
+
+    # Crear un diccionario con el NIT y el límite de inversión
+    limits = {}
+    for _, row in df.iterrows():
+        nit = str(row['IDENTIFICACION'])  # Convertir el NIT a string
+        limit = row['LIMITE']  # Columna donde se encuentra el límite de inversión
+        limits[nit] = limit
+    return limits
+
+@app.route('/ConsultaLimite', methods=['GET'])
+def get_investment_limit(request):
+    nit = request.args.get('nit')
+    if not nit:
+        return make_response(json.dumps({"error": "NIT is missing"}), 400)
+
+    # Obtener los datos del archivo Excel
+    try:
+        investment_limits = get_investment_limits_from_excel()
+    except Exception as e:
+        return make_response(json.dumps({"error": str(e)}), 500)
+
+    # Buscar el NIT en el archivo
+    limit = investment_limits.get(nit)
+    if not limit:
+        return make_response(json.dumps({"error": "NIT not found"}), 404)
+
+    # Respuesta con el límite de inversión
+    response = {
+        "nit": nit,
+        "limit": limit
+    }
+
+    return make_response(json.dumps(response), 200, {'Content-Type': 'application/json'})
