@@ -1,0 +1,90 @@
+import os
+from google.cloud import storage
+from flask import Flask, request, make_response, jsonify
+import pandas as pd
+
+app = Flask(__name__)
+
+# Configuración de Google Cloud Storage
+BUCKET_NAME = 'chatbot_risky'
+EXCEL_FILE_NAME = 'LIMITES_CRF/Biblia_GCS_11092024.xlsx'
+
+# Función para obtener los datos del archivo Excel desde Google Cloud Storage
+def get_data_from_excel():
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(BUCKET_NAME)
+    blob = bucket.blob(EXCEL_FILE_NAME)
+    data = blob.download_as_bytes()
+
+    # Leer el archivo Excel usando pandas
+    df = pd.read_excel(data)
+    return df
+
+@app.route('/ConsultaLimite', methods=['GET'])
+def get_limite_CRF(request):
+    # Recibir los parámetros desde el agente
+    documento = request.args.get('documento')
+    producto = request.args.get('producto')
+    tipo_limite = request.args.get('tipo_limite')
+
+    if not documento:
+        return jsonify({"error": "El parámetro 'documento' es requerido."}), 400
+
+    # Validar que 'documento' sea numérico
+    try:
+        documento = str(int(documento))  # Convertir a string si 'IDENTIFICACIÓN' es string
+    except ValueError:
+        return jsonify({"error": "El parámetro 'documento' debe ser un número válido."}), 400
+
+    try:
+        # Obtener los datos del archivo Excel
+        df = get_data_from_excel()
+
+        # Normalizar columnas y datos
+        df.columns = df.columns.str.strip().str.upper()
+        df['IDENTIFICACION'] = df['IDENTIFICACION'].astype(str)
+        df['PRODUCTO'] = df['PRODUCTO'].astype(str).str.strip().str.lower()
+        df['TIPO_LIMITE'] = df['TIPO_LIMITE'].astype(str).str.strip().str.lower()
+        df['COMPANIA'] = df['COMPANIA'].astype(str).str.strip().str.lower()
+
+        # Normalizar valores de entrada
+        if producto:
+            producto = producto.strip().lower()
+        if tipo_limite:
+            tipo_limite = tipo_limite.strip().lower()
+
+        print(f"Número total de registros: {len(df)}")
+
+        # Filtrar por 'documento'
+        result = df[df['IDENTIFICACION'] == documento]
+        print(f"Registros después de filtrar por documento ({documento}): {len(result)}")
+
+        # Filtrar por 'producto'
+        if producto:
+            result = result[result['PRODUCTO'].str.contains(producto, na=False, regex=False)]
+            print(f"Registros después de filtrar por producto ({producto}): {len(result)}")
+
+        # Filtrar por 'tipo_limite' utilizando 'regex=False'
+        if tipo_limite:
+            result = result[result['TIPO_LIMITE'].str.contains(tipo_limite, na=False, regex=False)]
+            print(f"Registros después de filtrar por tipo_limite ({tipo_limite}): {len(result)}")
+
+        # Verificar si se encontraron resultados
+        if result.empty:
+            return jsonify({"error": "No se encontró ningún límite para los parámetros proporcionados."}), 404
+
+        # Construir la respuesta JSON con la información relevante, incluyendo 'COMPANIA'
+        response = []
+        for _, row in result.iterrows():
+            response.append({
+                "documento": row['IDENTIFICACION'],
+                "limite": row['LIMITE'],
+                "compania": row['COMPANIA'],
+                "producto": row['PRODUCTO'],
+                "tipo_limite": row['TIPO_LIMITE']
+            })
+        return jsonify(response), 200
+
+    except Exception as e:
+        # Manejo general de excepciones
+        return jsonify({"error": f"Ocurrió un error al procesar la solicitud: {str(e)}"}), 500
