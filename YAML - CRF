@@ -1,0 +1,142 @@
+{
+  "openapi": "3.0.2",
+  "info": {
+    "title": "API de Consulta de Límite CRF",
+    "description": "API para consultar los límites asociados a un cliente basado en su documento de identificación, producto y tipo de límite. Devuelve información relevante, incluyendo la compañía asociada al límite.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://us-central1-chatbot-hackathon-433517.cloudfunctions.net/LIMITE_CRF"
+    }
+  ],
+  "paths": {
+    "/ConsultaLimite": {
+      "get": {
+        "summary": "Consulta límites del cliente",
+        "operationId": "getLimiteCRF",
+        "parameters": [
+          {
+            "name": "documento",
+            "in": "query",
+            "description": "Número de documento de identificación del cliente.",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "producto",
+            "in": "query",
+            "description": "Nombre del producto.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tipo_limite",
+            "in": "query",
+            "description": "Tipo de límite a consultar.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Consulta exitosa de límites",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "documento": {
+                        "type": "integer",
+                        "description": "Número de documento de identificación del cliente."
+                      },
+                      "limite": {
+                        "type": "number",
+                        "description": "Límite asociado al cliente."
+                      },
+                      "compania": {
+                        "type": "string",
+                        "description": "Compañía asociada al límite."
+                      },
+                      "producto": {
+                        "type": "string",
+                        "description": "Producto asociado al límite."
+                      },
+                      "tipo_limite": {
+                        "type": "string",
+                        "description": "Tipo de límite."
+                      }
+                    },
+                    "required": [
+                      "documento",
+                      "limite",
+                      "compania",
+                      "producto",
+                      "tipo_limite"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Solicitud incorrecta - Parámetro faltante o inválido.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Descripción del error."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No se encontró ningún límite para los parámetros proporcionados.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Descripción del error."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Error interno del servidor.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "description": "Descripción del error."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
